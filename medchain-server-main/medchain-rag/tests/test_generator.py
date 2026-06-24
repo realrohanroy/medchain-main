@@ -34,6 +34,7 @@ async def test_call_gemini_success():
     from llm.generator import _call_gemini
 
     mock_response = MagicMock()
+    mock_response.status_code = 200  # was missing — caused generator to treat as error
     mock_response.json.return_value = {
         "candidates": [
             {
