@@ -43,6 +43,17 @@ apiClient.interceptors.response.use(
                 });
 
                 localStorage.setItem('access_token', data.access);
+
+                // Keep the httpOnly medchain_session cookie in sync with the
+                // newly refreshed token so the edge middleware doesn't expire
+                // the routing session while the API session is still valid.
+                // Fire-and-forget: never block or delay the retried request.
+                fetch('/api/auth/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ access: data.access }),
+                }).catch(() => { /* best-effort — ignore network errors */ });
+
                 originalRequest.headers.Authorization = `Bearer ${data.access}`;
                 return apiClient(originalRequest);
             } catch (refreshError) {

@@ -75,7 +75,8 @@ There is also a **design vault** (`MedChain-Blockchain-Vault`, 11 docs) describi
 - `medchain_backend/settings.py:34`: `SECRET_KEY = 'django-insecure-=368c99...'`
 - `medchain-rag/config.py` and `.env` use the **same literal string** as `JWT_SECRET`.
 - Currently **not broken** — tokens validate correctly between services because both sides match. But this is Django's auto-generated dev default (`django-insecure-` prefix is Django's own "must change before production" marker).
-- **Action item before any deployment:** generate a real secret, sync it across both services, never commit it.
+- **⚠️ As of the httpOnly cookie auth-gate fix, `JWT_SECRET` now exists in THREE places:** Django `settings.py`, RAG `.env`, and frontend `.env.local`. When you rotate this key before deployment, update all three — not just two.
+- **Action item before any deployment:** generate a real secret, sync it across all three locations, never commit it.
 
 **`protobuf` version conflict in RAG dependencies.**
 - Installing `tf-keras` (needed to fix a Keras 3 incompatibility with `transformers`/`sentence-transformers`) pulled in `protobuf==7.35.1`, which `pip` flagged as incompatible with `google-ai-generativelanguage` (needs `<6.0.0`) and `grpcio-status` (needs `<6.0`).
