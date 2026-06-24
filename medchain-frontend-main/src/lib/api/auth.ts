@@ -66,7 +66,12 @@ export const authApi = {
         return response.data;
     },
 
-    logout: () => {
+    logout: async () => {
+        // Clear the real httpOnly session cookie via the server-side route.
+        // (JS cannot clear httpOnly cookies directly via document.cookie.)
+        await fetch('/api/auth/logout', { method: 'POST' });
+
+        // Clear all locally-stored auth data used by the Axios client.
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_role');
@@ -74,7 +79,6 @@ export const authApi = {
         localStorage.removeItem('user_first_name');
         localStorage.removeItem('user_last_name');
         localStorage.removeItem('user_id');
-        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     },
 
     getRole: (): 'patient' | 'doctor' => {

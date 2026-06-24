@@ -37,10 +37,19 @@ export default function AuthPage() {
         setSuccessMessage(null);
     };
 
-    const navigateToDashboard = (role: string) => {
-        const dashboardRole = role === 'DOCTOR' ? 'doctor' : 'patient';
-        document.cookie = `auth_token=jwt-${dashboardRole}; path=/; max-age=3600`;
-        localStorage.setItem('user_role', role);
+    const navigateToDashboard = async (loginData: { access: string; refresh: string; role: string }) => {
+        const dashboardRole = loginData.role === 'DOCTOR' ? 'doctor' : 'patient';
+        // Set the real httpOnly session cookie via the server-side API route.
+        // This replaces the previous forgeable document.cookie approach.
+        await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                access: loginData.access,
+                refresh: loginData.refresh,
+                role: loginData.role,
+            }),
+        });
         router.push(`/dashboard/${dashboardRole}`);
     };
 
@@ -54,7 +63,7 @@ export default function AuthPage() {
             if (isLogin) {
                 // Login: no role needed — backend returns the user's actual role
                 const res = await authApi.login({ email, password });
-                navigateToDashboard(res.role);
+                await navigateToDashboard(res);
             } else {
                 // Register: send selected role
                 const nameParts = name.trim().split(' ');
@@ -112,7 +121,7 @@ export default function AuthPage() {
             });
             
             if (isLogin) {
-                navigateToDashboard(res.role);
+                await navigateToDashboard(res);
             } else {
                 // If it was register flow, it created the user.
                 // Switch to login and prompt them to login.
