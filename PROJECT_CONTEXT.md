@@ -280,6 +280,9 @@ WHERE patient = X AND (visibility = 'PATIENT_VISIBLE' OR requester_role == 'DOCT
 ```
 **Product decision:** `PROVIDER_ONLY` notes are hidden from the patient, but visible to **any** doctor who holds an active `AccessGrant` for that patient — not just the original author, but also not merely any doctor with an active `CareRelationship`. This is the critical distinction from the three-tier model in §6: *connection alone does not imply history visibility*. A doctor who has connected but not yet received a grant cannot read `PROVIDER_ONLY` notes. One exception: **a doctor can always read entries they personally authored**, with no `AccessGrant` required — otherwise a doctor couldn't review their own chart notes from the current visit without a separate approval cycle. This exception applies regardless of grant status, and the filter function must implement it explicitly. This must be a single shared filter function called from both the direct API and RAG retrieval. If the two layers implement this check separately, they will eventually drift, and the RAG assistant becomes a side channel that leaks exactly what the access-control layer was built to hide.
 
+> [!NOTE]
+> Deliberate limitation: Clinical entries (Vitals, Diagnosis, Prescription) are all-or-nothing under a grant — the SELECTED scope does not extend to them, only the FULL scope does.
+
 ---
 
 ## 8. RAG Architecture: Strict Per-Patient Isolation

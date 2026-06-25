@@ -42,8 +42,8 @@ export default function DoctorPatientsPage() {
                 setGrants(grantData);
                 setAppointments(aptData);
                 // Auto-select first patient
-                if (grantData.length > 0) {
-                    setSelectedPatientId(grantData[0].patient);
+                if (grantData.length > 0 && grantData[0].patient_details) {
+                    setSelectedPatientId(grantData[0].patient_details.id);
                 } else if (aptData.length > 0 && aptData[0].patient_id) {
                     setSelectedPatientId(aptData[0].patient_id);
                 }
@@ -62,15 +62,16 @@ export default function DoctorPatientsPage() {
 
         // Add patients from access grants
         for (const g of grants) {
+            const patientId = g.patient_details?.id || g.id; // fallback
             const name = `${g.patient_details?.first_name || ''} ${g.patient_details?.last_name || ''}`.trim() || g.patient_details?.email || 'Unknown';
             const email = g.patient_details?.email || '';
-            map.set(g.patient, {
-                id: g.patient,
+            map.set(patientId, {
+                id: patientId,
                 initials: (name[0] || 'U').toUpperCase(),
                 name,
                 email,
                 source: 'grant',
-                lastVisit: new Date(g.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                lastVisit: new Date(g.granted_at || g.created_at || new Date()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             });
         }
 

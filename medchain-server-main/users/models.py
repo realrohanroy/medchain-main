@@ -1,7 +1,12 @@
 import uuid
+import secrets
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+
+def generate_connection_token():
+    return secrets.token_urlsafe(32)
 
 
 class CustomUserManager(BaseUserManager):
@@ -29,6 +34,16 @@ class CustomUser(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     role = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.PATIENT)
+
+    # Doctor-only QR connection token. Patients scan/paste this to establish a
+    # CareRelationship via POST /share/care/connect/. Stable across sessions;
+    # manually rotatable via POST /auth/me/connection-qr/regenerate/.
+    # Blank for patient accounts — generated lazily on first QR request for doctors.
+    connection_token = models.CharField(
+        max_length=64, unique=True, null=True, blank=True,
+        db_index=True, default=None,
+        help_text="Doctor-only QR connection token. Null for patients."
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

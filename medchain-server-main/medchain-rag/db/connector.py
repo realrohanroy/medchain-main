@@ -5,7 +5,6 @@ from config import DB_PATH
 
 logger = logging.getLogger(__name__)
 
-
 def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -13,10 +12,10 @@ def _get_conn() -> sqlite3.Connection:
 
 
 def _normalize_uuid(val: Any) -> str:
-    """Normalize UUID values to lowercase string without braces."""
+    """Normalize UUID values to lowercase string without braces and hyphens."""
     if val is None:
         return ""
-    return str(val).lower().strip("{}")
+    return str(val).lower().replace("-", "").strip("{}")
 
 
 def fetch_all_patients() -> List[Dict[str, Any]]:
@@ -81,12 +80,11 @@ def fetch_appointments_for_patient(patient_id: str) -> List[Dict[str, Any]]:
         conn.close()
 
 
-def fetch_all_records() -> List[Dict[str, Any]]:
+def fetch_all_records(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all records with patient email for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT r.id, r.record_type, r.record_date, r.doctor_name,
                    r.file_url, r.created_at,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
@@ -94,8 +92,13 @@ def fetch_all_records() -> List[Dict[str, Any]]:
                    u.first_name, u.last_name
             FROM records_record r
             JOIN users_customuser u ON r.user_id = u.id
-            """
-        ).fetchall()
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(u.id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
         return [dict(r) for r in rows]
     except Exception as e:
         logger.error(f"fetch_all_records error: {e}")
@@ -104,12 +107,11 @@ def fetch_all_records() -> List[Dict[str, Any]]:
         conn.close()
 
 
-def fetch_all_appointments() -> List[Dict[str, Any]]:
+def fetch_all_appointments(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all appointments with patient info for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT a.id, a.doctor_name, a.specialty, a.appointment_date,
                    a.appointment_time, a.reason, a.status, a.created_at,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
@@ -117,8 +119,13 @@ def fetch_all_appointments() -> List[Dict[str, Any]]:
                    u.first_name, u.last_name
             FROM appointments_appointment a
             JOIN users_customuser u ON a.user_id = u.id
-            """
-        ).fetchall()
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(u.id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
         return [dict(r) for r in rows]
     except Exception as e:
         logger.error(f"fetch_all_appointments error: {e}")
@@ -127,23 +134,33 @@ def fetch_all_appointments() -> List[Dict[str, Any]]:
         conn.close()
 
 
-def fetch_all_vitals() -> List[Dict[str, Any]]:
+def fetch_all_vitals(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all vitals records with patient info for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT v.id, v.recorded_at, v.weight_kg, v.height_cm,
                    v.blood_pressure_sys, v.blood_pressure_dia,
                    v.heart_rate_bpm, v.temperature_c, v.notes,
+                   v.author_id, v.visibility,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
                    u.email AS patient_email,
                    u.first_name, u.last_name
             FROM clinical_vitals v
             JOIN users_customuser u ON v.user_id = u.id
-            """
-        ).fetchall()
-        return [dict(r) for r in rows]
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(u.id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
+        results = []
+        for r in rows:
+            row_dict = dict(r)
+            row_dict["author_id"] = _normalize_uuid(row_dict.get("author_id"))
+            results.append(row_dict)
+        return results
     except Exception as e:
         logger.error(f"fetch_all_vitals error: {e}")
         return []
@@ -151,22 +168,32 @@ def fetch_all_vitals() -> List[Dict[str, Any]]:
         conn.close()
 
 
-def fetch_all_diagnoses() -> List[Dict[str, Any]]:
+def fetch_all_diagnoses(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all diagnoses with patient info for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT d.id, d.condition_name, d.icd_code, d.diagnosed_date,
                    d.status, d.severity, d.notes,
+                   d.author_id, d.visibility,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
                    u.email AS patient_email,
                    u.first_name, u.last_name
             FROM clinical_diagnosis d
             JOIN users_customuser u ON d.user_id = u.id
-            """
-        ).fetchall()
-        return [dict(r) for r in rows]
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(u.id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
+        results = []
+        for r in rows:
+            row_dict = dict(r)
+            row_dict["author_id"] = _normalize_uuid(row_dict.get("author_id"))
+            results.append(row_dict)
+        return results
     except Exception as e:
         logger.error(f"fetch_all_diagnoses error: {e}")
         return []
@@ -174,22 +201,32 @@ def fetch_all_diagnoses() -> List[Dict[str, Any]]:
         conn.close()
 
 
-def fetch_all_prescriptions() -> List[Dict[str, Any]]:
+def fetch_all_prescriptions(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all prescriptions with patient info for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT p.id, p.medication_name, p.dosage, p.frequency,
                    p.start_date, p.end_date, p.refills_remaining, p.instructions,
+                   p.author_id, p.visibility,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
                    u.email AS patient_email,
                    u.first_name, u.last_name
             FROM clinical_prescription p
             JOIN users_customuser u ON p.user_id = u.id
-            """
-        ).fetchall()
-        return [dict(r) for r in rows]
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(u.id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
+        results = []
+        for r in rows:
+            row_dict = dict(r)
+            row_dict["author_id"] = _normalize_uuid(row_dict.get("author_id"))
+            results.append(row_dict)
+        return results
     except Exception as e:
         logger.error(f"fetch_all_prescriptions error: {e}")
         return []
@@ -217,12 +254,11 @@ def fetch_patient_by_id(patient_id: str) -> Dict[str, Any]:
         conn.close()
 
 
-def fetch_all_parsed_data() -> List[Dict[str, Any]]:
+def fetch_all_parsed_data(patient_id: str = None) -> List[Dict[str, Any]]:
     """Return all parsed medical document key-values with patient info for indexing."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        query = """
             SELECT p.id, p.key, p.value, p.extracted_at, p.record_id,
                    LOWER(CAST(r.user_id AS TEXT)) AS patient_id,
                    u.email AS patient_email,
@@ -230,8 +266,13 @@ def fetch_all_parsed_data() -> List[Dict[str, Any]]:
             FROM parsing_parseddata p
             JOIN records_record r ON p.record_id = r.id
             JOIN users_customuser u ON r.user_id = u.id
-            """
-        ).fetchall()
+        """
+        params = []
+        if patient_id:
+            query += " WHERE LOWER(CAST(r.user_id AS TEXT)) = LOWER(?)"
+            params.append(_normalize_uuid(patient_id))
+            
+        rows = conn.execute(query, params).fetchall()
         return [dict(r) for r in rows]
     except Exception as e:
         logger.error(f"fetch_all_parsed_data error: {e}")
@@ -246,14 +287,15 @@ def fetch_all_access_grants() -> List[Dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT g.id, g.created_at,
-                   LOWER(CAST(g.doctor_id AS TEXT)) AS doctor_id,
-                   LOWER(CAST(g.patient_id AS TEXT)) AS patient_id,
+            SELECT g.id, g.granted_at,
+                   LOWER(CAST(rel.doctor_id AS TEXT)) AS doctor_id,
+                   LOWER(CAST(rel.patient_id AS TEXT)) AS patient_id,
                    doc.first_name AS doctor_first_name, doc.last_name AS doctor_last_name, doc.email AS doctor_email,
                    pat.email AS patient_email, pat.first_name AS patient_first_name, pat.last_name AS patient_last_name
             FROM sharing_accessgrant g
-            JOIN users_customuser doc ON g.doctor_id = doc.id
-            JOIN users_customuser pat ON g.patient_id = pat.id
+            JOIN sharing_carerelationship rel ON g.care_relationship_id = rel.id
+            JOIN users_customuser doc ON rel.doctor_id = doc.id
+            JOIN users_customuser pat ON rel.patient_id = pat.id
             """
         ).fetchall()
         return [dict(r) for r in rows]
@@ -271,13 +313,14 @@ def fetch_all_access_requests() -> List[Dict[str, Any]]:
         rows = conn.execute(
             """
             SELECT req.id, req.reason, req.status, req.created_at,
-                   LOWER(CAST(req.doctor_id AS TEXT)) AS doctor_id,
-                   LOWER(CAST(req.patient_id AS TEXT)) AS patient_id,
+                   LOWER(CAST(rel.doctor_id AS TEXT)) AS doctor_id,
+                   LOWER(CAST(rel.patient_id AS TEXT)) AS patient_id,
                    doc.first_name AS doctor_first_name, doc.last_name AS doctor_last_name, doc.email AS doctor_email,
                    pat.email AS patient_email, pat.first_name AS patient_first_name, pat.last_name AS patient_last_name
             FROM sharing_accessrequest req
-            JOIN users_customuser doc ON req.doctor_id = doc.id
-            JOIN users_customuser pat ON req.patient_id = pat.id
+            JOIN sharing_carerelationship rel ON req.care_relationship_id = rel.id
+            JOIN users_customuser doc ON rel.doctor_id = doc.id
+            JOIN users_customuser pat ON rel.patient_id = pat.id
             """
         ).fetchall()
         return [dict(r) for r in rows]

@@ -35,7 +35,8 @@ class UserMeView(APIView):
         data.pop('password', None)
         return Response(data, status=status.HTTP_200_OK)
 
-from sharing.models import AccessGrant
+from sharing.models import AccessGrant, CareRelationship
+from sharing.access_control import get_accessible_record_ids
 from appointments.models import Appointment
 from records.models import Record
 
@@ -46,19 +47,29 @@ class DoctorAnalyticsView(APIView):
         if request.user.role != 'DOCTOR':
             return Response({"error": "Only doctors can view analytics."}, status=status.HTTP_403_FORBIDDEN)
 
-        # 1. Total unique patients the doctor has an active grant for
-        total_patients = AccessGrant.objects.filter(doctor=request.user).values('patient').distinct().count()
+        # 1. Total unique patients the doctor has an active connection with
+        active_rels = CareRelationship.objects.filter(doctor=request.user, status='ACTIVE').select_related('patient')
+        total_patients = active_rels.count()
 
         # 2. Total appointments
         total_appointments = Appointment.objects.filter(doctor=request.user).count()
 
         # 3. Total records accessible
-        accessible_records = Record.objects.filter(grants__doctor=request.user).distinct()
-        total_records = accessible_records.count()
+        # Reuses the same logic as record retrieval views — never a separate implementation
+        total_records = sum(
+            get_accessible_record_ids(request.user, rel.patient).count()
+            for rel in active_rels
+        )
 
         # 4. Breakdown of record types for charts
         # Since we use free-form record_type in Record model, we group by it
         from django.db.models import Count
+        # Fetch accessible record IDs again to filter records for grouping
+        accessible_ids_all = []
+        for rel in active_rels:
+            accessible_ids_all.extend(get_accessible_record_ids(request.user, rel.patient))
+        
+        accessible_records = Record.objects.filter(id__in=accessible_ids_all)
         record_distribution = accessible_records.values('record_type').annotate(count=Count('id'))
         
         # Build dictionary for the donut chart
@@ -206,4 +217,42 @@ class GoogleAuthView(APIView):
                 {"error": "Invalid Google token."},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+
+from users.models import generate_connection_token
+
+class DoctorConnectionQRView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'DOCTOR':
+            return Response({"error": "Only doctors can have connection QRs."}, status=status.HTTP_403_FORBIDDEN)
+            
+        if not request.user.connection_token:
+            request.user.connection_token = generate_connection_token()
+            request.user.save(update_fields=['connection_token'])
+            
+        qr_data = f"medchain:connect:{request.user.connection_token}"
+        return Response({
+            "token": request.user.connection_token,
+            "qr_data": qr_data
+        }, status=status.HTTP_200_OK)
+
+
+class DoctorConnectionQRRegenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'DOCTOR':
+            return Response({"error": "Only doctors can regenerate connection QRs."}, status=status.HTTP_403_FORBIDDEN)
+            
+        request.user.connection_token = generate_connection_token()
+        request.user.save(update_fields=['connection_token'])
+        
+        qr_data = f"medchain:connect:{request.user.connection_token}"
+        return Response({
+            "token": request.user.connection_token,
+            "qr_data": qr_data
+        }, status=status.HTTP_200_OK)
+
 

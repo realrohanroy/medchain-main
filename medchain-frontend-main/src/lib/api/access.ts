@@ -7,12 +7,23 @@ export interface BriefUserDetails {
     last_name: string;
 }
 
+export interface CareRelationshipModel {
+    id: string;
+    patient: string;
+    doctor: string;
+    patient_details: BriefUserDetails;
+    doctor_details: BriefUserDetails;
+    status: string;
+    initiated_by: string;
+    relationship_type: string;
+}
+
 export interface AccessRequestModel {
     id: string;
-    doctor: string;
-    patient: string;
+    care_relationship: string;
     reason: string;
     status: string;
+    requested_scope: string;
     created_at: string;
     doctor_details: BriefUserDetails;
     patient_details?: BriefUserDetails;
@@ -20,8 +31,8 @@ export interface AccessRequestModel {
 
 export interface AccessGrantModel {
     id: string;
-    patient: string;
-    doctor: string;
+    care_relationship: string;
+    scope: string;
     created_at: string;
     doctor_details: BriefUserDetails;
     patient_details?: BriefUserDetails;
@@ -44,7 +55,7 @@ export const accessApi = {
         const response = await apiClient.get<any>('/share/access/grants/');
         return Array.isArray(response.data) ? response.data : response.data.results || [];
     },
-    createRequest: async (params: { patient_email: string; reason?: string }) => {
+    createRequest: async (params: { care_relationship: string; requested_scope?: string; reason?: string }) => {
         const response = await apiClient.post('/share/access/requests/', params);
         return response.data;
     },
@@ -53,7 +64,11 @@ export const accessApi = {
         return Array.isArray(response.data) ? response.data : response.data.results || [];
     },
     revokeGrant: async (id: string) => {
-        const response = await apiClient.delete(`/share/access/grants/${id}/`);
+        const response = await apiClient.patch(`/share/access/grants/${id}/set_scope/`, { scope: 'NONE' });
         return response;
+    },
+    connectWithDoctor: async (token: string): Promise<CareRelationshipModel> => {
+        const response = await apiClient.post('/share/care/connect/', { token });
+        return response.data;
     }
 };

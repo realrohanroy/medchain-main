@@ -7,12 +7,19 @@ load_dotenv()
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
 
-# Path to the existing Django SQLite database
-DB_PATH = os.getenv("DB_PATH", str(BASE_DIR.parent / "medchain-server" / "db.sqlite3"))
+def resolve_path(p: str, default: Path) -> str:
+    path = os.getenv(p)
+    if not path:
+        return str(default)
+    if not os.path.isabs(path):
+        return str((BASE_DIR / path).resolve())
+    return path
 
-# FAISS index storage path
-FAISS_INDEX_PATH = os.getenv("FAISS_INDEX_PATH", str(BASE_DIR / "data" / "faiss.index"))
-FAISS_META_PATH  = os.getenv("FAISS_META_PATH",  str(BASE_DIR / "data" / "faiss_meta.json"))
+# Path to the existing Django SQLite database
+DB_PATH = resolve_path("DB_PATH", BASE_DIR.parent / "db.sqlite3")
+
+# FAISS index storage directory (per-patient indices)
+PATIENT_INDICES_DIR = resolve_path("PATIENT_INDICES_DIR", BASE_DIR / "data" / "patient_indices")
 
 # ── Embedding Model ─────────────────────────────────────────────────────────────
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")

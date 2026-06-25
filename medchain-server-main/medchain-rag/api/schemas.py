@@ -42,6 +42,10 @@ class QuestionBankResponse(BaseModel):
 
 
 
+class ReindexRequest(BaseModel):
+    patient_id: Optional[str] = Field(None, description="Reindex specifically for this patient UUID. If omitted, reindexes all patients.")
+
+
 class ReindexResponse(BaseModel):
     status: str
     total_chunks: int

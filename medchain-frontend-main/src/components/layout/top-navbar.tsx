@@ -10,8 +10,7 @@ export function TopNavbar() {
     const getPageTitle = () => {
         if (pathname.includes('/records')) return 'My Records';
         if (pathname.includes('/appointments')) return 'Appointments';
-        if (pathname.includes('/access')) return 'Access Control';
-        if (pathname.includes('/requests')) return 'Access Requests';
+        if (pathname.includes('/access')) return 'Privacy & Access';
         if (pathname.includes('/profile')) return 'Profile';
         if (pathname.includes('/help')) return 'Help Center';
         if (pathname.includes('/doctor/patients')) return 'Patients';

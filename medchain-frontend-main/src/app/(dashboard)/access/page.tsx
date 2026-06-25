@@ -108,6 +108,15 @@ export default function AccessControlPage() {
                             {requests.filter(r => r.status === 'Pending').length}
                         </span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('connect')}
+                        className={`pb-4 px-1 text-[15px] font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'connect'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
+                    >
+                        <User className="w-4 h-4" /> Connect with Doctor
+                    </button>
                 </div>
 
                 {/* Records Grid */}
@@ -263,7 +272,9 @@ export default function AccessControlPage() {
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                            <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wide rounded-md">Full Access</span>
+                                            <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wide rounded-md">
+                                                {grant.scope === 'FULL' ? 'Full Access' : grant.scope === 'SELECTED' ? 'Selected Records' : 'No Access'}
+                                            </span>
                                         </div>
                                         <div className="justify-self-end pr-2">
                                             <button onClick={async () => { await accessApi.revokeGrant(grant.id); fetchAccessData(); }} className="text-[12px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
@@ -274,6 +285,48 @@ export default function AccessControlPage() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {/* Connect with Doctor */}
+                {activeTab === 'connect' && (
+                    <div className="bg-white rounded-[2rem] p-8 shadow-sm border-2 border-blue-600/20 relative overflow-y-auto flex flex-col min-h-[300px] max-w-2xl mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                                <ShieldCheck className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-[17px] font-bold text-slate-900">Connect with a Doctor</h3>
+                        </div>
+                        <p className="text-slate-500 text-sm mb-6">
+                            Enter the connection token provided by your doctor to establish a secure care relationship.
+                        </p>
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const token = (e.currentTarget.elements.namedItem('token') as HTMLInputElement).value;
+                            if (!token) return;
+                            try {
+                                await accessApi.connectWithDoctor(token);
+                                alert('Successfully connected!');
+                                (e.target as HTMLFormElement).reset();
+                                setActiveTab('authorized-doctors');
+                                fetchAccessData();
+                            } catch (err) {
+                                alert('Failed to connect. Invalid token or already connected.');
+                            }
+                        }}>
+                            <div className="space-y-4">
+                                <input 
+                                    name="token"
+                                    type="text" 
+                                    placeholder="e.g. m_yT0k3n_..." 
+                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-600 transition-colors font-mono text-sm"
+                                    required
+                                />
+                                <button type="submit" className="w-full py-3.5 bg-blue-600 text-white font-bold text-[14px] rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
+                                    Establish Connection
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 )}
 

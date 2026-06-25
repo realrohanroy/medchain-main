@@ -14,12 +14,12 @@ from unittest.mock import patch, MagicMock
 
 def test_normalize_uuid_lowercase():
     from db.connector import _normalize_uuid
-    assert _normalize_uuid("ABC-123") == "abc-123"
+    assert _normalize_uuid("ABC-123") == "abc123"
 
 
 def test_normalize_uuid_strips_braces():
     from db.connector import _normalize_uuid
-    assert _normalize_uuid("{some-uuid}") == "some-uuid"
+    assert _normalize_uuid("{some-uuid}") == "someuuid"
 
 
 def test_normalize_uuid_none():
@@ -30,7 +30,7 @@ def test_normalize_uuid_none():
 def test_normalize_uuid_standard():
     from db.connector import _normalize_uuid
     uid = "550e8400-e29b-41d4-a716-446655440000"
-    assert _normalize_uuid(uid) == uid.lower()
+    assert _normalize_uuid(uid) == uid.lower().replace("-", "")
 
 
 # ── DB fetch tests (mocked) ────────────────────────────────────────────────────

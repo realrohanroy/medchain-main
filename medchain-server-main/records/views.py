@@ -84,19 +84,21 @@ class RecordTimelineView(APIView):
         serializer = RecordTimelineSerializer(records, many=True, context={'request': request})
         return Response(serializer.data, status=200)
 
-from sharing.models import AccessGrant
+from sharing.access_control import has_active_grant, get_accessible_record_ids
 
 class DoctorPatientRecordsView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     def get(self, request, patient_id):
-        # Verify the requesting user is authorized to view this patient's records
-        has_access = AccessGrant.objects.filter(doctor=request.user, patient_id=patient_id).exists()
-        if not has_access:
+        # Use shared source of truth for access check
+        if not has_active_grant(request.user, patient_id):
             return Response({"error": "You do not have access to this patient's records."}, status=status.HTTP_403_FORBIDDEN)
 
-        records = Record.objects.filter(user_id=patient_id)\
+        # Get filtered list of accessible IDs
+        accessible_ids = get_accessible_record_ids(request.user, patient_id)
+
+        records = Record.objects.filter(id__in=accessible_ids)\
             .select_related('blockchain_tx')\
             .order_by('-record_date', '-created_at')
 

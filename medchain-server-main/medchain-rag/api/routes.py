@@ -1,16 +1,19 @@
 import logging
 from typing import Optional
 
+from django_setup import init_django
+init_django()
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from api.schemas import QueryRequest, QueryResponse, ReindexResponse, HealthResponse, SourceChunk, QuestionBankResponse
+from api.schemas import QueryRequest, QueryResponse, ReindexResponse, ReindexRequest, HealthResponse, SourceChunk, QuestionBankResponse
 from auth.jwt_validator import validate_token
 from retrieval.retriever import retrieve, build_context
 from llm.generator import generate_answer, classify_query_mode, generate_patient_answer
 from ingestion.transformer import build_all_documents
 from ingestion.chunker import chunk_documents
-from embeddings.faiss_store import build_index, save_index, refresh_index, get_index
+from embeddings.faiss_store import build_index, save_index, refresh_index, get_index, invalidate_cache
 from config import LLM_PROVIDER, EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
@@ -50,47 +53,84 @@ async def health_check():
 
 # ── /reindex ───────────────────────────────────────────────────────────────────
 
-def _do_reindex():
-    """Background task: pull all DB data, chunk, embed, save FAISS index."""
-    logger.info("Starting reindex …")
-    docs   = build_all_documents()
+import os
+
+def _reindex_patient(patient_id: str) -> int:
+    """Build and save FAISS index for a single patient. Returns number of chunks."""
+    logger.info(f"Reindexing patient: {patient_id}")
+    invalidate_cache(patient_id)
+    docs = build_all_documents(patient_id)
     chunks = chunk_documents(docs)
+    
+    from embeddings.faiss_store import _get_patient_paths
+    idx_p, meta_p = _get_patient_paths(patient_id)
+    
+    if not chunks:
+        # If no chunks, clean up existing FAISS index files for this patient
+        try:
+            if os.path.exists(idx_p):
+                os.remove(idx_p)
+            if os.path.exists(meta_p):
+                os.remove(meta_p)
+        except Exception as e:
+            logger.warning(f"Error removing empty index files for {patient_id}: {e}")
+        return 0
+
     index, meta = build_index(chunks)
-    save_index(index, meta)
-    refresh_index(index, meta)
-    logger.info(f"Reindex complete: {len(chunks)} chunks indexed.")
+    save_index(patient_id, index, meta)
+    refresh_index(patient_id, index, meta)
+    return len(chunks)
+
+
+def _do_reindex(patient_id: str = None):
+    """Background task: pull DB data, chunk, embed, save FAISS index per patient."""
+    logger.info("Starting background reindex …")
+    if patient_id:
+        _reindex_patient(patient_id)
+    else:
+        from db.connector import fetch_all_patients
+        for p in fetch_all_patients():
+            p_id = p.get("id")
+            if p_id:
+                _reindex_patient(p_id)
 
 
 @router.post("/reindex", response_model=ReindexResponse, tags=["Admin"])
 async def reindex(
-    background_tasks: BackgroundTasks,
+    req_body: Optional[ReindexRequest] = None,
     user: dict = Depends(get_current_user),
 ):
     """
     Rebuild the FAISS index from the database.
-    Runs synchronously so the caller knows when it's done.
-    Doctors and admins only in production; any authenticated user here for demo.
+    If patient_id is provided, only reindex that patient's data.
+    Otherwise, reindex all patients.
     """
     logger.info(f"Reindex triggered by user: {user.get('email')}")
-    docs   = build_all_documents()
-    chunks = chunk_documents(docs)
+    patient_id = req_body.patient_id if req_body else None
 
-    if not chunks:
+    if patient_id:
+        total_chunks = _reindex_patient(patient_id)
         return ReindexResponse(
-            status="warning",
-            total_chunks=0,
-            message="No data found in the database to index.",
+            status="success",
+            total_chunks=total_chunks,
+            message=f"Successfully reindexed patient {patient_id} ({total_chunks} chunks).",
         )
-
-    index, meta = build_index(chunks)
-    save_index(index, meta)
-    refresh_index(index, meta)
-
-    return ReindexResponse(
-        status="success",
-        total_chunks=len(chunks),
-        message=f"Successfully indexed {len(chunks)} chunks from {len(docs)} documents.",
-    )
+    else:
+        from db.connector import fetch_all_patients
+        patients = fetch_all_patients()
+        total_chunks = 0
+        reindexed_count = 0
+        for p in patients:
+            p_id = p.get("id")
+            if p_id:
+                chunks_count = _reindex_patient(p_id)
+                total_chunks += chunks_count
+                reindexed_count += 1
+        return ReindexResponse(
+            status="success",
+            total_chunks=total_chunks,
+            message=f"Successfully reindexed {reindexed_count} patients (total {total_chunks} chunks).",
+        )
 
 
 # ── /query ─────────────────────────────────────────────────────────────────────
@@ -102,23 +142,47 @@ async def query_records(
 ):
     """
     Main RAG endpoint.
-    - Restricted to patients only. Reject doctor/admin requests with 403.
-    - Standardizes patient_id scoping using patient's user_id from JWT.
+    - Restricted to patients and doctors.
+    - If user is a DOCTOR, they must provide patient_id and hold an active AccessGrant.
+    - Standardizes patient_id scoping using patient's user_id from JWT or body.patient_id.
     - Classifies the query: record_grounded or general_medical.
-    - Fetches context from index if needed; otherwise calls general knowledge flow.
+    - Fetches context from patient's index if needed; otherwise calls general knowledge flow.
     """
     role = user.get("role", "PATIENT")
     user_id = user.get("user_id", "")
 
-    # Reject non-patient users (e.g. Doctors) from accessing this AI endpoint
-    if role != "PATIENT":
+    if role not in ["PATIENT", "DOCTOR"]:
         raise HTTPException(
             status_code=403,
-            detail="Access forbidden: The AI Assistant is restricted to patient accounts only."
+            detail="Access forbidden: The AI Assistant is restricted to patient and doctor accounts only."
         )
 
-    patient_id = user_id
-    logger.info(f"Query from patient {user.get('email')} | patient_id={patient_id} | q={body.query[:60]}")
+    if role == "PATIENT":
+        patient_id = user_id
+    else:  # DOCTOR
+        patient_id = body.patient_id
+        if not patient_id:
+            raise HTTPException(
+                status_code=400,
+                detail="patient_id is required in the request body for doctor queries."
+            )
+        
+        # Access Grant Check (Gate)
+        from users.models import CustomUser
+        from sharing.access_control import has_active_grant
+        try:
+            doc_user = CustomUser.objects.get(id=user_id)
+            pat_user = CustomUser.objects.get(id=patient_id)
+        except CustomUser.DoesNotExist:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        if not has_active_grant(doc_user, pat_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Access forbidden: You do not have an active access grant to query this patient's records."
+            )
+
+    logger.info(f"Query from {role.lower()} {user.get('email')} | patient_id={patient_id} | q={body.query[:60]}")
 
     # Classify query mode
     mode = classify_query_mode(body.query)
@@ -128,11 +192,11 @@ async def query_records(
     
     # Try to retrieve records if available
     try:
-        chunks = retrieve(body.query, patient_id=patient_id, top_k=body.top_k or 5)
+        chunks = retrieve(body.query, patient_id=patient_id, top_k=body.top_k or 5, requester_role=role, requester_id=user_id)
         context = build_context(chunks)
     except FileNotFoundError:
         # If the FAISS index is not built yet, log a warning and proceed with empty context
-        logger.warning("FAISS index not built yet. Answering from general knowledge.")
+        logger.warning(f"FAISS index for patient {patient_id} not built yet. Answering from general knowledge.")
         if mode == "record_grounded":
             mode = "general_medical"
     except Exception as e:

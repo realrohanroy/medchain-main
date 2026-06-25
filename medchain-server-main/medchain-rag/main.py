@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils.logger import setup_logging
 from api.routes import router
 from config import CORS_ORIGINS
-from embeddings.faiss_store import get_index
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -16,15 +15,16 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Pre-warm: try to load existing FAISS index on startup."""
+    """Log number of existing patient indices on startup."""
     try:
-        index, meta = get_index()
-        logger.info(f"FAISS index pre-loaded at startup: {index.ntotal} vectors")
-    except FileNotFoundError:
-        logger.warning(
-            "No FAISS index found at startup. "
-            "Call POST /reindex to build the index before querying."
-        )
+        from config import PATIENT_INDICES_DIR
+        if os.path.exists(PATIENT_INDICES_DIR):
+            indices = [f for f in os.listdir(PATIENT_INDICES_DIR) if f.endswith(".index")]
+            logger.info(f"FastAPI startup: found {len(indices)} patient FAISS indices in {PATIENT_INDICES_DIR}")
+        else:
+            logger.info("FastAPI startup: patient FAISS indices directory not found yet.")
+    except Exception as e:
+        logger.warning(f"Error checking patient indices at startup: {e}")
     yield
 
 

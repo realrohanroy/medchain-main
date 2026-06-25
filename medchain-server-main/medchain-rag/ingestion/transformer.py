@@ -13,10 +13,10 @@ from db.connector import (
 
 
 def _normalize_id(val: Any) -> str:
-    """Normalize UUID to lowercase string."""
+    """Normalize UUID to lowercase string without hyphens."""
     if val is None:
         return ""
-    return str(val).lower().strip("{}")
+    return str(val).lower().replace("-", "").strip("{}")
 
 
 def _patient_name(row: Dict[str, Any]) -> str:
@@ -233,24 +233,28 @@ def access_request_to_text(row: Dict[str, Any]) -> str:
     )
 
 
-def build_all_documents() -> List[Dict[str, Any]]:
+def build_all_documents(patient_id: str = None) -> List[Dict[str, Any]]:
     """
-    Pull all data from DB and convert to text documents.
+    Pull data from DB and convert to text documents.
+    If patient_id is provided, only pulls data for that patient.
     Returns list of {text, patient_id, source_type, source_id}.
     """
     docs: List[Dict[str, Any]] = []
 
     # Patient profiles
     for p in fetch_all_patients():
+        p_id = _normalize_id(p.get("id", ""))
+        if patient_id and p_id != _normalize_id(patient_id):
+            continue
         docs.append({
             "text":        patient_profile_to_text(p),
-            "patient_id":  _normalize_id(p.get("id", "")),
+            "patient_id":  p_id,
             "source_type": "profile",
-            "source_id":   _normalize_id(p.get("id", "")),
+            "source_id":   p_id,
         })
 
     # Medical records
-    for r in fetch_all_records():
+    for r in fetch_all_records(patient_id):
         docs.append({
             "text":        record_to_text(r),
             "patient_id":  _normalize_id(r.get("patient_id", "")),
@@ -259,7 +263,7 @@ def build_all_documents() -> List[Dict[str, Any]]:
         })
 
     # Appointments
-    for a in fetch_all_appointments():
+    for a in fetch_all_appointments(patient_id):
         docs.append({
             "text":        appointment_to_text(a),
             "patient_id":  _normalize_id(a.get("patient_id", "")),
@@ -268,34 +272,40 @@ def build_all_documents() -> List[Dict[str, Any]]:
         })
 
     # Vitals
-    for v in fetch_all_vitals():
+    for v in fetch_all_vitals(patient_id):
         docs.append({
             "text":        vitals_to_text(v),
             "patient_id":  _normalize_id(v.get("patient_id", "")),
-            "source_type": "vital",
+            "source_type": "vitals",
             "source_id":   _normalize_id(v.get("id", "")),
+            "author_id":   _normalize_id(v.get("author_id", "")),
+            "visibility":  v.get("visibility", "PATIENT_VISIBLE"),
         })
 
     # Diagnoses
-    for d in fetch_all_diagnoses():
+    for d in fetch_all_diagnoses(patient_id):
         docs.append({
             "text":        diagnosis_to_text(d),
             "patient_id":  _normalize_id(d.get("patient_id", "")),
             "source_type": "diagnosis",
             "source_id":   _normalize_id(d.get("id", "")),
+            "author_id":   _normalize_id(d.get("author_id", "")),
+            "visibility":  d.get("visibility", "PATIENT_VISIBLE"),
         })
 
     # Prescriptions
-    for pr in fetch_all_prescriptions():
+    for pr in fetch_all_prescriptions(patient_id):
         docs.append({
             "text":        prescription_to_text(pr),
             "patient_id":  _normalize_id(pr.get("patient_id", "")),
             "source_type": "prescription",
             "source_id":   _normalize_id(pr.get("id", "")),
+            "author_id":   _normalize_id(pr.get("author_id", "")),
+            "visibility":  pr.get("visibility", "PATIENT_VISIBLE"),
         })
 
     # Parsed document key-values
-    for pd in fetch_all_parsed_data():
+    for pd in fetch_all_parsed_data(patient_id):
         docs.append({
             "text":        parsed_data_to_text(pd),
             "patient_id":  _normalize_id(pd.get("patient_id", "")),
@@ -305,18 +315,24 @@ def build_all_documents() -> List[Dict[str, Any]]:
 
     # Access grants
     for g in fetch_all_access_grants():
+        g_pat_id = _normalize_id(g.get("patient_id", ""))
+        if patient_id and g_pat_id != _normalize_id(patient_id):
+            continue
         docs.append({
             "text":        access_grant_to_text(g),
-            "patient_id":  _normalize_id(g.get("patient_id", "")),
+            "patient_id":  g_pat_id,
             "source_type": "access_grant",
             "source_id":   _normalize_id(g.get("id", "")),
         })
 
     # Access requests
     for req in fetch_all_access_requests():
+        req_pat_id = _normalize_id(req.get("patient_id", ""))
+        if patient_id and req_pat_id != _normalize_id(patient_id):
+            continue
         docs.append({
             "text":        access_request_to_text(req),
-            "patient_id":  _normalize_id(req.get("patient_id", "")),
+            "patient_id":  req_pat_id,
             "source_type": "access_request",
             "source_id":   _normalize_id(req.get("id", "")),
         })

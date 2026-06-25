@@ -17,7 +17,8 @@ import {
   Users,
   CheckSquare,
   BarChart,
-  Brain
+  Brain,
+  QrCode
 } from 'lucide-react';
 
 const patientSidebarItems = [
@@ -25,7 +26,6 @@ const patientSidebarItems = [
   { name: 'Records', href: '/records', icon: Folder },
   { name: 'Appointments', href: '/appointments', icon: CalendarDays },
   { name: 'Access Control', href: '/access', icon: Shield },
-  { name: 'Requests', href: '/requests', icon: ClipboardList },
   { name: 'Profile', href: '/profile', icon: UserCircle },
 ];
 
@@ -33,6 +33,7 @@ const doctorSidebarItems = [
   { name: 'Dashboard', href: '/dashboard/doctor', icon: LayoutDashboard },
   { name: 'Patients', href: '/doctor/patients', icon: Users },
   { name: 'Schedule', href: '/doctor/schedule', icon: CalendarDays },
+  { name: 'Connect QR', href: '/doctor/connect', icon: QrCode },
   { name: 'Approvals', href: '/doctor/approvals', icon: CheckSquare },
   { name: 'Medical Records', href: '/doctor/records', icon: Folder },
   { name: 'Analytics', href: '/doctor/analytics', icon: BarChart },

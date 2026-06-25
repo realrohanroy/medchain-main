@@ -14,6 +14,8 @@ class Vitals(models.Model):
     heart_rate_bpm = models.IntegerField(null=True, blank=True, help_text="Heart rate (bpm)")
     temperature_c = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, help_text="Temperature (°C)")
     notes = models.TextField(blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+', help_text="Doctor who created this entry, if any")
+    visibility = models.CharField(max_length=20, default='PATIENT_VISIBLE', choices=[('PATIENT_VISIBLE', 'Patient Visible'), ('PROVIDER_ONLY', 'Provider Only')])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -43,6 +45,8 @@ class Diagnosis(models.Model):
     status = models.CharField(max_length=50, default='Active', choices=STATUS_CHOICES)
     severity = models.CharField(max_length=50, default='Moderate', choices=SEVERITY_CHOICES)
     notes = models.TextField(blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+', help_text="Doctor who created this entry, if any")
+    visibility = models.CharField(max_length=20, default='PATIENT_VISIBLE', choices=[('PATIENT_VISIBLE', 'Patient Visible'), ('PROVIDER_ONLY', 'Provider Only')])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -63,6 +67,8 @@ class Prescription(models.Model):
     end_date = models.DateField(null=True, blank=True)
     refills_remaining = models.IntegerField(default=0)
     instructions = models.TextField(blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+', help_text="Doctor who created this entry, if any")
+    visibility = models.CharField(max_length=20, default='PATIENT_VISIBLE', choices=[('PATIENT_VISIBLE', 'Patient Visible'), ('PROVIDER_ONLY', 'Provider Only')])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

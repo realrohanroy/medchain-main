@@ -1,8 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GenerateShareTokenView, AccessSharedRecordsView, AccessRequestViewSet, AccessGrantViewSet, GrantedPatientRecordsView
+from .views import GenerateShareTokenView, AccessSharedRecordsView, AccessRequestViewSet, AccessGrantViewSet, GrantedPatientRecordsView, CareRelationshipViewSet
 
 router = DefaultRouter()
+router.register(r'care', CareRelationshipViewSet, basename='care-relationships')
 router.register(r'requests', AccessRequestViewSet, basename='access-requests')
 router.register(r'grants', AccessGrantViewSet, basename='access-grants')
 

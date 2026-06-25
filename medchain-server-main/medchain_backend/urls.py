@@ -25,6 +25,7 @@ urlpatterns = [
     path('records/', include('records.urls')),
     path('share/', include('sharing.urls')),
     path('appointments/', include('appointments.urls')),
+    path('clinical/', include('clinical.urls')),
 ]
 
 if settings.DEBUG:
