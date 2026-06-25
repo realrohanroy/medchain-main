@@ -86,7 +86,7 @@ def fetch_all_records(patient_id: str = None) -> List[Dict[str, Any]]:
     try:
         query = """
             SELECT r.id, r.record_type, r.record_date, r.doctor_name,
-                   r.file_url, r.created_at,
+                   r.file_url, r.created_at, r.date_confidence, r.source_facility,
                    LOWER(CAST(u.id AS TEXT)) AS patient_id,
                    u.email AS patient_email,
                    u.first_name, u.last_name

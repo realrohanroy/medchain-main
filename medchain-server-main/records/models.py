@@ -11,6 +11,12 @@ class Record(models.Model):
     file_url = models.FileField(upload_to='uploads/')
     file_hash = models.CharField(max_length=64, help_text="SHA-256 hash of the file contents", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    source_facility = models.CharField(max_length=200, blank=True)
+    date_confidence = models.CharField(
+        max_length=20,
+        choices=[('EXACT', 'Exact'), ('APPROXIMATE', 'Approximate'), ('UNKNOWN', 'Unknown')],
+        default='UNKNOWN'
+    )
 
     class Meta:
         indexes = [

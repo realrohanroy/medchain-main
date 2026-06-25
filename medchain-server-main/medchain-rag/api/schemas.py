@@ -25,6 +25,16 @@ class QueryResponse(BaseModel):
     follow_up_questions: List[str] = Field(default_factory=list, description="AI suggested follow-up questions")
 
 
+class SynthesizeRequest(BaseModel):
+    patient_id: str = Field(..., description="Scope synthesis to a specific patient UUID")
+
+
+class SynthesizeResponse(BaseModel):
+    summary: str
+    sources: List[SourceChunk]
+
+
+
 class QuestionInfo(BaseModel):
     id: int
     question_text: str

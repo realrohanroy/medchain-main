@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -160,6 +160,9 @@ export default function RecordsPage() {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [recordType, setRecordType] = useState('General Health');
     const [doctorName, setDoctorName] = useState('');
+    const [recordDate, setRecordDate] = useState('');
+    const [dateConfidence, setDateConfidence] = useState('UNKNOWN');
+    const [sourceFacility, setSourceFacility] = useState('');
     const [uploadLoading, setUploadLoading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -190,10 +193,13 @@ export default function RecordsPage() {
         setUploadSuccess(false);
         try {
             const { recordsApi } = await import('@/lib/api/records');
-            await recordsApi.upload(uploadFile, recordType, doctorName);
+            await recordsApi.upload(uploadFile, recordType, doctorName, recordDate, dateConfidence, sourceFacility);
             setUploadSuccess(true);
             setUploadFile(null);
             setDoctorName('');
+            setRecordDate('');
+            setDateConfidence('UNKNOWN');
+            setSourceFacility('');
             await fetchRecords(); // refresh list
             setTimeout(() => { setIsUploadOpen(false); setUploadSuccess(false); }, 1500);
         } catch {
@@ -371,6 +377,39 @@ export default function RecordsPage() {
                                     onChange={(e) => setDoctorName(e.target.value)}
                                     placeholder="e.g. Dr. Smith"
                                     required
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[14px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                />
+                            </div>
+
+                            {/* Event Date */}
+                            <div>
+                                <label className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase mb-2 block">Event Date</label>
+                                <input
+                                    type="date"
+                                    value={recordDate}
+                                    onChange={(e) => setRecordDate(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[14px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                />
+                            </div>
+
+                            {/* Date Confidence */}
+                            <div>
+                                <label className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase mb-2 block">Date Confidence</label>
+                                <select value={dateConfidence} onChange={(e) => setDateConfidence(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[14px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                                    <option value="UNKNOWN">Unknown</option>
+                                    <option value="EXACT">Exact Date</option>
+                                    <option value="APPROXIMATE">Approximate</option>
+                                </select>
+                            </div>
+
+                            {/* Source Facility */}
+                            <div>
+                                <label className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase mb-2 block">Facility / Source</label>
+                                <input
+                                    type="text"
+                                    value={sourceFacility}
+                                    onChange={(e) => setSourceFacility(e.target.value)}
+                                    placeholder="e.g. General Hospital"
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[14px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 />
                             </div>

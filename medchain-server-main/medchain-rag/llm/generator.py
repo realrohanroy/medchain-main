@@ -27,9 +27,18 @@ Rules:
 # Base prompt alias for backward compatibility/tests
 SYSTEM_PROMPT = PATIENT_SYSTEM_PROMPT
 
+SYNTHESIZE_SYSTEM_PROMPT = """You are a medical assistant. Synthesize the provided records into a chronological timeline of the patient's medical history. 
+Group events by date, ordered from oldest to newest. For patient-provided records, explicitly note the source (e.g. 'Patient Uploaded: Dr. Smith / General Hospital'). 
+If a date is marked approximate or is unknown, state that clearly and place it chronologically based on your best assessment.
+Never include internal database identifiers, UUIDs, or raw database keys in your response.
+Disclaimer: This information is for educational purposes only. Please consult a healthcare professional for clinical advice."""
 
 def _build_prompt(context: str, query: str, mode: str = "record_grounded") -> str:
-    return f"""{PATIENT_SYSTEM_PROMPT}
+    system_prompt = PATIENT_SYSTEM_PROMPT
+    if mode == "synthesize":
+        system_prompt = SYNTHESIZE_SYSTEM_PROMPT
+
+    return f"""{system_prompt}
 
 --- Patient Health Records Context ---
 {context}

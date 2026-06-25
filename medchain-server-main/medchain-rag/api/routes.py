@@ -7,7 +7,7 @@ init_django()
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from api.schemas import QueryRequest, QueryResponse, ReindexResponse, ReindexRequest, HealthResponse, SourceChunk, QuestionBankResponse
+from api.schemas import QueryRequest, QueryResponse, ReindexResponse, ReindexRequest, HealthResponse, SourceChunk, QuestionBankResponse, SynthesizeRequest, SynthesizeResponse
 from auth.jwt_validator import validate_token
 from retrieval.retriever import retrieve, build_context
 from llm.generator import generate_answer, classify_query_mode, generate_patient_answer
@@ -280,4 +280,86 @@ async def get_questions(user: dict = Depends(get_current_user)):
             ]
         })
     return QuestionBankResponse(categories=categories_list)
+
+
+# ── /synthesize ────────────────────────────────────────────────────────────────
+
+@router.post("/synthesize", response_model=SynthesizeResponse, tags=["RAG"])
+async def synthesize_records(
+    body: SynthesizeRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Synthesize a chronological history for a patient.
+    - Restricted to doctors with an active grant.
+    """
+    role = user.get("role", "PATIENT")
+    user_id = user.get("user_id", "")
+
+    if role != "DOCTOR":
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden: Only doctors can synthesize longitudinal patient records."
+        )
+
+    patient_id = body.patient_id
+    if not patient_id:
+        raise HTTPException(
+            status_code=400,
+            detail="patient_id is required."
+        )
+    
+    # Access Grant Check (Gate)
+    from users.models import CustomUser
+    from sharing.access_control import has_active_grant
+    try:
+        doc_user = CustomUser.objects.get(id=user_id)
+        pat_user = CustomUser.objects.get(id=patient_id)
+    except CustomUser.DoesNotExist:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not has_active_grant(doc_user, pat_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden: You do not have an active access grant to query this patient's records."
+        )
+
+    logger.info(f"Synthesize request from doctor {user.get('email')} for patient_id={patient_id}")
+
+    mode = "synthesize"
+    query = "Summarize my medical history chronologically."
+
+    chunks = []
+    context = ""
+    
+    try:
+        # EXACT same retrieve pipeline as /query
+        chunks = retrieve(query, patient_id=patient_id, top_k=100, requester_role=role, requester_id=user_id)
+        context = build_context(chunks)
+    except FileNotFoundError:
+        logger.warning(f"FAISS index for patient {patient_id} not built yet.")
+    except Exception as e:
+        logger.error(f"Query retrieval error: {e}")
+
+    try:
+        answer = await generate_patient_answer(context, query, mode)
+    except Exception as e:
+        logger.error(f"LLM generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+
+    sources = [
+        SourceChunk(
+            text=c.get("text", ""),
+            source_type=c.get("source_type", ""),
+            source_id=c.get("source_id", ""),
+            patient_id=c.get("patient_id", ""),
+            score=c.get("score", 0.0),
+        )
+        for c in chunks
+    ]
+
+    return SynthesizeResponse(
+        summary=answer,
+        sources=sources,
+    )
 

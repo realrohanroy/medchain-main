@@ -3,11 +3,11 @@ from django.utils import timezone
 from .models import Record
 
 class RecordUploadSerializer(serializers.ModelSerializer):
-    record_date = serializers.DateField(required=False, default=timezone.localdate)
+    record_date = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = Record
-        fields = ('id', 'record_type', 'record_date', 'doctor_name', 'file_url')
+        fields = ('id', 'record_type', 'record_date', 'doctor_name', 'file_url', 'date_confidence', 'source_facility')
         read_only_fields = ('id',)
 
 
@@ -26,4 +26,4 @@ class RecordTimelineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Record
-        fields = ('id', 'record_type', 'doctor_name', 'record_date', 'file_url', 'blockchain_status')
+        fields = ('id', 'record_type', 'doctor_name', 'record_date', 'file_url', 'blockchain_status', 'date_confidence', 'source_facility')

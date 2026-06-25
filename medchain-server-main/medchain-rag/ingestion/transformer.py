@@ -34,12 +34,15 @@ def record_to_text(row: Dict[str, Any]) -> str:
     date   = row.get("record_date")  or "unknown date"
     doctor = row.get("doctor_name")  or "unknown doctor"
     email  = row.get("patient_email") or ""
+    conf   = row.get("date_confidence") or "UNKNOWN"
+    facility = row.get("source_facility") or ""
+    facility_str = f" | Facility: {facility}" if facility else ""
 
     return (
         f"Medical Record — Patient: {name} ({email})\n"
         f"Record Type: {rtype}\n"
-        f"Date of Record: {date}\n"
-        f"Treating Doctor: {doctor}\n"
+        f"Date of Record: {date} (Confidence: {conf})\n"
+        f"Treating Doctor: {doctor}{facility_str}\n"
         f"Patient ID: {row.get('patient_id', '')}\n"
         f"Record ID: {row.get('id', '')}\n"
     )
