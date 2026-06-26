@@ -26,6 +26,7 @@ urlpatterns = [
     path('share/', include('sharing.urls')),
     path('appointments/', include('appointments.urls')),
     path('clinical/', include('clinical.urls')),
+    path('api/v1/blockchain/', include('blockchain.urls')),
 ]
 
 if settings.DEBUG:
