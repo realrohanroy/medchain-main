@@ -34,6 +34,7 @@ export interface AccessGrantModel {
     care_relationship: string;
     scope: string;
     created_at: string;
+    granted_at?: string;
     doctor_details: BriefUserDetails;
     patient_details?: BriefUserDetails;
 }
@@ -55,7 +56,7 @@ export const accessApi = {
         const response = await apiClient.get<any>('/share/access/grants/');
         return Array.isArray(response.data) ? response.data : response.data.results || [];
     },
-    createRequest: async (params: { care_relationship: string; requested_scope?: string; reason?: string }) => {
+    createRequest: async (params: { care_relationship: string; requested_scope?: string; reason?: string; requested_records?: string[] }) => {
         const response = await apiClient.post('/share/access/requests/', params);
         return response.data;
     },
@@ -70,5 +71,9 @@ export const accessApi = {
     connectWithDoctor: async (token: string): Promise<CareRelationshipModel> => {
         const response = await apiClient.post('/share/care/connect/', { token });
         return response.data;
+    },
+    getManifest: async (careRelationshipId: string): Promise<any[]> => {
+        const response = await apiClient.get(`/share/care/${careRelationshipId}/manifest/`);
+        return Array.isArray(response.data) ? response.data : response.data.results || [];
     }
 };

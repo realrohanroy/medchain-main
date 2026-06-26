@@ -107,4 +107,20 @@ export const ragApi = {
         }
         return res.json();
     },
+
+    synthesize: async (params: { patient_id: string }): Promise<{ answer: string; sources: SourceChunk[] }> => {
+        const res = await fetch(`${RAG_BASE_URL}/synthesize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders(),
+            },
+            body: JSON.stringify(params),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: res.statusText }));
+            throw new Error(err.detail || 'Synthesize failed');
+        }
+        return res.json();
+    },
 };
