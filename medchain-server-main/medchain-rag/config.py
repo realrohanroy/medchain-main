@@ -38,8 +38,8 @@ OLLAMA_MODEL   = os.getenv("OLLAMA_MODEL", "mistral")
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 # Must match the Django SECRET_KEY used to sign JWT tokens
-JWT_SECRET      = os.getenv("JWT_SECRET", "django-insecure-=368c99s73=ih5%4*mlh1f()0zkovo7#!j2#-j*=%4#3h-iat%")
+JWT_SECRET      = os.getenv("JWT_SECRET", "6w6@6)ia=*cpxuig)y8p90ij2s#2#b$(hb(7cnrfj^cp2w)d4=")
 JWT_ALGORITHM   = os.getenv("JWT_ALGORITHM", "HS256")
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+CORS_ORIGINS = os.getenv("RAG_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")

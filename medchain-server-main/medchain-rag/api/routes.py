@@ -26,7 +26,19 @@ def get_current_user(
 ) -> dict:
     if not credentials:
         raise HTTPException(status_code=401, detail="Authorization header missing")
-    return validate_token(credentials.credentials)
+    payload = validate_token(credentials.credentials)
+    # Django's Simple JWT only carries 'user_id' — it does NOT include role/email.
+    # Enrich the payload from the DB so downstream role checks (DOCTOR vs PATIENT)
+    # work instead of silently defaulting everyone to PATIENT.
+    if not payload.get("role"):
+        from users.models import CustomUser
+        try:
+            db_user = CustomUser.objects.get(id=payload["user_id"])
+        except CustomUser.DoesNotExist:
+            raise HTTPException(status_code=401, detail="User not found")
+        payload["role"] = db_user.role
+        payload["email"] = db_user.email
+    return payload
 
 
 # ── /health ────────────────────────────────────────────────────────────────────
@@ -35,10 +47,11 @@ def get_current_user(
 async def health_check():
     """Health check — returns index status and system config."""
     try:
-        index, _ = get_index()
-        index_loaded  = True
-        total_vectors = index.ntotal
-    except FileNotFoundError:
+        import os
+        from config import PATIENT_INDICES_DIR
+        index_loaded = os.path.exists(PATIENT_INDICES_DIR)
+        total_vectors = 0 # Cannot get total across all patients easily
+    except Exception:
         index_loaded  = False
         total_vectors = 0
 

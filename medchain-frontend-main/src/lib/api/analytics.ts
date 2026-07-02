@@ -9,7 +9,7 @@ export interface DoctorAnalyticsResponse {
 
 export const analyticsApi = {
     getDoctorAnalytics: async (): Promise<DoctorAnalyticsResponse> => {
-        const response = await apiClient.get<DoctorAnalyticsResponse>('/users/analytics/');
+        const response = await apiClient.get<DoctorAnalyticsResponse>('/auth/analytics/');
         return response.data;
     }
 };

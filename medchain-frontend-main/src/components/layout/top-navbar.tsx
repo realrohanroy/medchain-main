@@ -1,11 +1,19 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Bell, Search, Menu, Settings, User } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 export function TopNavbar() {
     const pathname = usePathname();
     const router = useRouter();
+    const [role, setRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        setRole(localStorage.getItem('user_role'));
+    }, []);
+
+    const isDoctor = pathname.includes('/doctor') || role === 'DOCTOR';
 
     const getPageTitle = () => {
         if (pathname.includes('/records')) return 'My Records';
@@ -31,7 +39,7 @@ export function TopNavbar() {
                 </button>
 
                 {title && (
-                    <h1 className="hidden md:block text-[1.5rem] font-bold text-blue-600 tracking-tight">
+                    <h1 className={`hidden md:block text-[1.5rem] font-bold tracking-tight ${isDoctor ? 'text-emerald-600' : 'text-blue-600'}`}>
                         {title}
                     </h1>
                 )}
@@ -44,7 +52,7 @@ export function TopNavbar() {
                     <input
                         type="text"
                         placeholder="Search records or doctors..."
-                        className="h-10 w-full rounded-full bg-slate-50 hover:bg-slate-100 active:bg-slate-100/90 pl-11 pr-4 text-[13px] font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all border border-slate-100"
+                        className={`h-10 w-full rounded-full bg-slate-50 hover:bg-slate-100 active:bg-slate-100/90 pl-11 pr-4 text-[13px] font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${isDoctor ? 'focus:ring-emerald-500/50' : 'focus:ring-blue-500/50'} transition-all border border-slate-100`}
                     />
                 </div>
 
@@ -58,7 +66,7 @@ export function TopNavbar() {
                     {/* Profile Avatar */}
                     <button 
                         onClick={() => router.push('/profile')}
-                        className="h-9 w-9 rounded-full bg-slate-50 border-2 border-white ring-2 ring-slate-100 flex items-center justify-center text-sm font-semibold text-slate-400 shadow-sm cursor-pointer hover:ring-blue-500 hover:scale-105 active:scale-95 overflow-hidden relative transition-all">
+                        className={`h-9 w-9 rounded-full bg-slate-50 border-2 border-white ring-2 ring-slate-100 flex items-center justify-center text-sm font-semibold text-slate-400 shadow-sm cursor-pointer ${isDoctor ? 'hover:ring-emerald-500' : 'hover:ring-blue-500'} hover:scale-105 active:scale-95 overflow-hidden relative transition-all`}>
                         <User className="w-5 h-5 text-slate-600" />
                     </button>
                 </div>

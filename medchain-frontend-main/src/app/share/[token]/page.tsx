@@ -156,9 +156,16 @@ export default function SharedRecordsPage({ params }: { params: Promise<{ token:
                                     <span className={`px-3 py-1.5 ${statusColors.bg} ${statusColors.text} text-[10px] font-extrabold tracking-wider rounded-full`}>
                                         {record.blockchain_status}
                                     </span>
-                                    <button className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2.5 rounded-full active:scale-95 transition-all">
-                                        <Download className="w-5 h-5" />
-                                    </button>
+                                    {record.file_url && (
+                                        <div className="flex items-center gap-3">
+                                            <a href={record.file_url} target="_blank" rel="noopener noreferrer" className="text-[14px] font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all">
+                                                View
+                                            </a>
+                                            <a href={record.file_url} download className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full active:scale-95 transition-all">
+                                                <Download className="w-5 h-5" />
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

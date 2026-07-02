@@ -15,7 +15,9 @@ class RecordTimelineSerializer(serializers.ModelSerializer):
     blockchain_status = serializers.SerializerMethodField()
 
     def get_blockchain_status(self, obj):
-        return getattr(obj.blockchain_tx, 'status', 'PENDING')
+        if hasattr(obj, 'blockchain_tx'):
+            return obj.blockchain_tx.status
+        return 'PENDING'
 
     file_url = serializers.SerializerMethodField()
     def get_file_url(self, obj):

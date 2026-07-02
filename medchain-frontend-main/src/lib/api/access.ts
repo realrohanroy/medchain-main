@@ -68,6 +68,10 @@ export const accessApi = {
         const response = await apiClient.patch(`/share/access/grants/${id}/set_scope/`, { scope: 'NONE' });
         return response;
     },
+    grantAccess: async (id: string) => {
+        const response = await apiClient.patch(`/share/access/grants/${id}/set_scope/`, { scope: 'FULL' });
+        return response;
+    },
     connectWithDoctor: async (token: string): Promise<CareRelationshipModel> => {
         const response = await apiClient.post('/share/care/connect/', { token });
         return response.data;

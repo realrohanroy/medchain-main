@@ -56,6 +56,10 @@ class RecordUploadView(APIView):
         # Trigger Async Process with ID only for thread safety
         trigger_blockchain_transaction(tx.id)
         
+        # Trigger Async Document Parsing
+        from parsing.parser import trigger_document_parsing
+        trigger_document_parsing(record.id)
+        
         return Response({
             "message": "Record uploaded successfully.",
             "record_id": record.id,

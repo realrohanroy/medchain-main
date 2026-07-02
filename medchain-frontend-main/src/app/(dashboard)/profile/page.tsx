@@ -111,7 +111,7 @@ export default function ProfilePage() {
                                         {userProfile?.id ? String(userProfile.id) : 'N/A'}
                                     </p>
                                 </div>
-                                <div className="text-slate-400 group-hover:text-blue-600 transition-colors">
+                                <div className={`text-slate-400 group-hover:text-${accentColor}-600 transition-colors`}>
                                     <Copy className="w-4 h-4" />
                                 </div>
                             </div>
@@ -153,13 +153,13 @@ export default function ProfilePage() {
                         <div className="bg-white border border-slate-100 shadow-sm p-1.5 rounded-[1.25rem] flex items-center mb-8">
                             <button
                                 onClick={() => setActiveTab('personal')}
-                                className={`flex-1 py-3.5 text-[14px] font-bold rounded-xl transition-all ${activeTab === 'personal' ? 'bg-white text-blue-600 shadow-sm border border-slate-100/50' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`flex-1 py-3.5 text-[14px] font-bold rounded-xl transition-all ${activeTab === 'personal' ? `bg-white text-${accentColor}-600 shadow-sm border border-slate-100/50` : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 Personal Info
                             </button>
                             <button
                                 onClick={() => setActiveTab('settings')}
-                                className={`flex-1 py-3.5 text-[14px] font-bold rounded-xl transition-all ${activeTab === 'settings' ? 'bg-white text-blue-600 shadow-sm border border-slate-100/50' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`flex-1 py-3.5 text-[14px] font-bold rounded-xl transition-all ${activeTab === 'settings' ? `bg-white text-${accentColor}-600 shadow-sm border border-slate-100/50` : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 Settings
                             </button>
@@ -208,7 +208,7 @@ export default function ProfilePage() {
                                 {/* Notifications */}
                                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
                                     <div className="flex items-center gap-3 mb-8">
-                                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDoctor ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                                             <Bell className="w-4 h-4" />
                                         </div>
                                         <h3 className="text-[15px] font-bold text-slate-900">Notifications</h3>
@@ -217,13 +217,13 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between cursor-pointer" onClick={() => setReminders(!reminders)}>
                                             <span className="text-[13px] font-medium text-slate-700">Appointment Reminders</span>
-                                            <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${reminders ? 'bg-blue-600 justify-end' : 'bg-slate-200 justify-start'}`}>
+                                            <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${reminders ? (isDoctor ? 'bg-emerald-600 justify-end' : 'bg-blue-600 justify-end') : 'bg-slate-200 justify-start'}`}>
                                                 <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between cursor-pointer" onClick={() => setResults(!results)}>
                                             <span className="text-[13px] font-medium text-slate-700">New Test Results</span>
-                                            <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${results ? 'bg-blue-600 justify-end' : 'bg-slate-200 justify-start'}`}>
+                                            <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${results ? (isDoctor ? 'bg-emerald-600 justify-end' : 'bg-blue-600 justify-end') : 'bg-slate-200 justify-start'}`}>
                                                 <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
                                             </div>
                                         </div>
@@ -233,7 +233,7 @@ export default function ProfilePage() {
                                 {/* Security Options */}
                                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
                                     <div className="flex items-center gap-3 mb-8">
-                                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDoctor ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                                             <Shield className="w-4 h-4" />
                                         </div>
                                         <h3 className="text-[15px] font-bold text-slate-900">Security Options</h3>
@@ -241,14 +241,14 @@ export default function ProfilePage() {
 
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between cursor-pointer group">
-                                            <div className="flex items-center gap-3 text-slate-400 group-hover:text-blue-600 transition-colors">
+                                            <div className={`flex items-center gap-3 text-slate-400 transition-colors ${isDoctor ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`}>
                                                 <Fingerprint className="w-4 h-4" />
                                                 <span className="text-[13px] font-medium text-slate-700">Biometric Authentication</span>
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
+                                            <ChevronRight className={`w-4 h-4 text-slate-300 transition-colors ${isDoctor ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`} />
                                         </div>
                                         <div className="flex items-center justify-between cursor-pointer group">
-                                            <div className="flex items-center gap-3 text-slate-400 group-hover:text-blue-600 transition-colors">
+                                            <div className={`flex items-center gap-3 text-slate-400 transition-colors ${isDoctor ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`}>
                                                 <Key className="w-4 h-4" />
                                                 <span className="text-[13px] font-medium text-slate-700">Two-Factor Auth (2FA)</span>
                                             </div>

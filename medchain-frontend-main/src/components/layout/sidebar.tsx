@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -47,16 +48,26 @@ const bottomItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [role, setRole] = useState<string | null>(null);
 
-  // Use the route path to determine the layout context
-  const isDoctor = pathname.includes('/doctor');
+  useEffect(() => {
+    setRole(localStorage.getItem('user_role'));
+  }, []);
+
+  // Use the route path or the role stored in localStorage to determine the layout context
+  const isDoctor = pathname.includes('/doctor') || role === 'DOCTOR';
   const sidebarItems = isDoctor ? doctorSidebarItems : patientSidebarItems;
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_role');
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
+    }
     window.location.href = '/login';
   };
 

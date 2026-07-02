@@ -22,12 +22,13 @@ def _get_patient_paths(patient_id: str) -> Tuple[str, str]:
     import uuid
     normalized = str(patient_id).lower().strip("{}")
     try:
-        uuid.UUID(normalized)
+        valid_uuid = uuid.UUID(normalized)
+        normalized_hex = valid_uuid.hex
     except ValueError:
         raise ValueError(f"Invalid patient_id for FAISS index: {patient_id}")
         
-    index_path = os.path.join(PATIENT_INDICES_DIR, f"{normalized}.index")
-    meta_path = os.path.join(PATIENT_INDICES_DIR, f"{normalized}_meta.json")
+    index_path = os.path.join(PATIENT_INDICES_DIR, f"{normalized_hex}.index")
+    meta_path = os.path.join(PATIENT_INDICES_DIR, f"{normalized_hex}_meta.json")
     return index_path, meta_path
 
 
@@ -71,7 +72,7 @@ def save_index(patient_id: str, index: faiss.Index, metadata: List[Dict[str, Any
     faiss.write_index(index, index_path)
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False)
-    logger.info(f"Saved FAISS index for patient {patient_id} → {index_path}")
+    logger.info(f"Saved FAISS index for patient {patient_id} -> {index_path}")
 
 
 def load_index(patient_id: str) -> Tuple[faiss.Index, List[Dict[str, Any]]]:
@@ -94,7 +95,8 @@ _cached_indices: Dict[str, Tuple[faiss.Index, List[Dict[str, Any]]]] = {}
 
 def get_index(patient_id: str) -> Tuple[faiss.Index, List[Dict[str, Any]]]:
     global _cached_indices
-    normalized = str(patient_id).lower().strip("{}")
+    import uuid
+    normalized = uuid.UUID(str(patient_id).lower().strip("{}")).hex
     if normalized not in _cached_indices:
         _cached_indices[normalized] = load_index(normalized)
     return _cached_indices[normalized]
@@ -103,14 +105,16 @@ def get_index(patient_id: str) -> Tuple[faiss.Index, List[Dict[str, Any]]]:
 def refresh_index(patient_id: str, index: faiss.Index, metadata: List[Dict[str, Any]]) -> None:
     """Called after /reindex to update the in-memory singleton cache."""
     global _cached_indices
-    normalized = str(patient_id).lower().strip("{}")
+    import uuid
+    normalized = uuid.UUID(str(patient_id).lower().strip("{}")).hex
     _cached_indices[normalized] = (index, metadata)
 
 
 def invalidate_cache(patient_id: str) -> None:
     """Remove patient's index from the singleton cache."""
     global _cached_indices
-    normalized = str(patient_id).lower().strip("{}")
+    import uuid
+    normalized = uuid.UUID(str(patient_id).lower().strip("{}")).hex
     _cached_indices.pop(normalized, None)
 
 

@@ -31,12 +31,16 @@ if _env_file.exists():
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=368c99s73=ih5%4*mlh1f()0zkovo7#!j2#-j*=%4#3h-iat%'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '6w6@6)ia=*cpxuig)y8p90ij2s#2#b$(hb(7cnrfj^cp2w)d4=')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
+if _allowed_hosts:
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(',')]
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -76,10 +80,14 @@ MIDDLEWARE = [
 ]
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
+_cors_origins = os.environ.get('DJANGO_CORS_ALLOWED_ORIGINS')
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',')]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'medchain_backend.urls'

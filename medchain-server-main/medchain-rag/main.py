@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -52,7 +53,16 @@ app.include_router(router, prefix="/api/v1")
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
+    # Responses generated here bypass CORSMiddleware, so the browser would see a
+    # CORS-less 500 as an opaque "Failed to fetch". Reflect the allowed Origin so
+    # the frontend can read the actual error message instead.
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin in CORS_ORIGINS:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred. Please try again."},
+        headers=headers,
     )

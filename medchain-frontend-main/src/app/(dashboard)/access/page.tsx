@@ -6,22 +6,26 @@ import {
     ActivitySquare, CheckCircle2, XCircle, Unlock
 } from "lucide-react"
 import { accessApi, AccessRequestModel, AccessGrantModel } from '@/lib/api/access';
+import { recordsApi, RecordItem } from '@/lib/api/records';
 import { sharingApi } from '@/lib/api/sharing';
 
 export default function AccessControlPage() {
     const [activeTab, setActiveTab] = useState('my-records');
     const [requests, setRequests] = useState<AccessRequestModel[]>([]);
     const [grants, setGrants] = useState<AccessGrantModel[]>([]);
+    const [records, setRecords] = useState<RecordItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchAccessData = async () => {
         try {
-            const [reqs, gs] = await Promise.all([
+            const [reqs, gs, recs] = await Promise.all([
                 accessApi.getRequests(),
-                accessApi.getGrants()
+                accessApi.getGrants(),
+                recordsApi.getTimeline(1)
             ]);
             setRequests(reqs);
             setGrants(gs);
+            setRecords(recs.results || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -77,7 +81,7 @@ export default function AccessControlPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-8 border-b border-slate-200">
+                <div className="flex items-center gap-8 border-b border-slate-200 overflow-x-auto whitespace-nowrap">
                     <button
                         onClick={() => setActiveTab('my-records')}
                         className={`pb-4 px-1 text-[15px] font-bold transition-all border-b-2 ${activeTab === 'my-records'
@@ -121,83 +125,62 @@ export default function AccessControlPage() {
 
                 {/* Records Grid */}
                 {activeTab === 'my-records' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {/* Card 1 */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100/80 group hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col justify-between min-h-[220px]">
-                        <div>
-                            <div className="flex justify-between items-start mb-5">
-                                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
-                                    <FileText className="w-5 h-5" />
-                                </div>
-                                <span className="px-3 py-1 bg-blue-50 text-blue-400 text-[10px] font-extrabold tracking-wider rounded-md uppercase">CONFIDENTIAL</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        {loading ? (
+                            <div className="col-span-full text-center text-slate-400 font-medium animate-pulse py-10">Loading records...</div>
+                        ) : records.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-[2rem] p-10 text-center border border-slate-100 shadow-sm flex flex-col items-center">
+                                <FileText className="w-12 h-12 text-slate-200 mb-4" />
+                                <h3 className="text-lg font-bold text-slate-700">No Records Found</h3>
+                                <p className="text-slate-500 mt-2">Upload some medical records to manage access.</p>
                             </div>
-                            <h3 className="text-[17px] font-bold text-slate-900 mb-1">Cardiology Summary</h3>
-                            <p className="text-[12px] font-medium text-slate-500 mb-5">Last updated Oct 12, 2023</p>
+                        ) : (
+                            records.map((record) => {
+                                const isPrivate = record.record_type.toLowerCase().includes('private') || record.record_type.toLowerCase().includes('psych');
+                                return (
+                                    <div key={record.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100/80 group hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col justify-between min-h-[220px]">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-5">
+                                                {isPrivate ? (
+                                                    <>
+                                                        <div className="w-10 h-10 bg-[#fff5f0] text-[#b56b3e] rounded-full flex items-center justify-center">
+                                                            <Lock className="w-5 h-5" />
+                                                        </div>
+                                                        <span className="px-3 py-1 bg-[#fff5f0] text-[#b56b3e] text-[10px] font-extrabold tracking-wider rounded-md uppercase">PRIVATE</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
+                                                            <FileText className="w-5 h-5" />
+                                                        </div>
+                                                        <span className="px-3 py-1 bg-blue-50 text-blue-400 text-[10px] font-extrabold tracking-wider rounded-md uppercase">CONFIDENTIAL</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <h3 className="text-[17px] font-bold text-slate-900 mb-1 line-clamp-1">{record.record_type}</h3>
+                                            <p className="text-[12px] font-medium text-slate-500 mb-5">
+                                                {record.record_date ? `Date: ${new Date(record.record_date).toLocaleDateString()}` : `By ${record.doctor_name}`}
+                                            </p>
 
-                            <div className="flex items-center gap-3">
-                                <div className="flex -space-x-3">
-                                    <img src="https://i.pravatar.cc/150?img=47" className="w-8 h-8 rounded-full border-2 border-white object-cover bg-slate-100" alt="Doctor" />
-                                    <img src="https://i.pravatar.cc/150?img=11" className="w-8 h-8 rounded-full border-2 border-white object-cover bg-slate-100" alt="Doctor" />
-                                    <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                        +1
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex -space-x-3">
+                                                    <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-slate-400">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                </div>
+                                                <span className="text-[12px] font-medium text-slate-500">
+                                                    Controlled Access
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button onClick={handleGrantAccess} className="w-full mt-6 py-2.5 font-bold text-[13px] text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 active:scale-95 transition-all">
+                                            Grant Access
+                                        </button>
                                     </div>
-                                </div>
-                                <span className="text-[12px] font-medium text-slate-500">3 Shared Access</span>
-                            </div>
-                        </div>
-                        <button onClick={handleGrantAccess} className="w-full mt-6 py-2.5 font-bold text-[13px] text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 active:scale-95 transition-all">
-                            Grant Access
-                        </button>
+                                );
+                            })
+                        )}
                     </div>
-
-                    {/* Card 2 */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100/80 group hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col justify-between min-h-[220px]">
-                        <div>
-                            <div className="flex justify-between items-start mb-5">
-                                <div className="w-10 h-10 bg-[#fff5f0] text-[#b56b3e] rounded-full flex items-center justify-center">
-                                    <Search className="w-5 h-5" />
-                                </div>
-                                <span className="px-3 py-1 bg-[#fff5f0] text-[#b56b3e] text-[10px] font-extrabold tracking-wider rounded-md uppercase">PRIVATE</span>
-                            </div>
-                            <h3 className="text-[17px] font-bold text-slate-900 mb-1">Full Blood Count</h3>
-                            <p className="text-[12px] font-medium text-slate-500 mb-5">Last updated Sep 28, 2023</p>
-
-                            <div className="flex items-center gap-3">
-                                <div className="flex -space-x-3">
-                                    <img src="https://i.pravatar.cc/150?img=47" className="w-8 h-8 rounded-full border-2 border-white object-cover bg-slate-100" alt="Doctor" />
-                                </div>
-                                <span className="text-[12px] font-medium text-slate-500">1 Shared Access</span>
-                            </div>
-                        </div>
-                        <button onClick={handleGrantAccess} className="w-full mt-6 py-2.5 font-bold text-[13px] text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 active:scale-95 transition-all">
-                            Grant Access
-                        </button>
-                    </div>
-
-                    {/* Card 3 */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100/80 group hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col justify-between min-h-[220px]">
-                        <div>
-                            <div className="flex justify-between items-start mb-5">
-                                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
-                                    <ActivitySquare className="w-5 h-5" />
-                                </div>
-                                <span className="px-3 py-1 bg-blue-50 text-blue-400 text-[10px] font-extrabold tracking-wider rounded-md uppercase">CONFIDENTIAL</span>
-                            </div>
-                            <h3 className="text-[17px] font-bold text-slate-900 mb-1">Genetic Screening</h3>
-                            <p className="text-[12px] font-medium text-slate-500 mb-5">Last updated Aug 15, 2023</p>
-
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400">
-                                    <Lock className="w-3.5 h-3.5" />
-                                </div>
-                                <span className="text-[12px] font-medium text-slate-500">No active shares</span>
-                            </div>
-                        </div>
-                        <button onClick={handleGrantAccess} className="w-full mt-6 py-2.5 font-bold text-[13px] text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 active:scale-95 transition-all">
-                            Grant Access
-                        </button>
-                    </div>
-                </div>
                 )}
 
                 {/* Requests Tab */}
@@ -272,14 +255,20 @@ export default function AccessControlPage() {
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                            <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wide rounded-md">
+                                            <span className={`px-3 py-1.5 text-[10px] font-bold tracking-wide rounded-md ${grant.scope === 'NONE' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-600'}`}>
                                                 {grant.scope === 'FULL' ? 'Full Access' : grant.scope === 'SELECTED' ? 'Selected Records' : 'No Access'}
                                             </span>
                                         </div>
                                         <div className="justify-self-end pr-2">
-                                            <button onClick={async () => { await accessApi.revokeGrant(grant.id); fetchAccessData(); }} className="text-[12px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
-                                                Revoke
-                                            </button>
+                                            {grant.scope === 'NONE' ? (
+                                                <button onClick={async () => { await accessApi.grantAccess(grant.id); fetchAccessData(); }} className="text-[12px] font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
+                                                    Grant Access
+                                                </button>
+                                            ) : (
+                                                <button onClick={async () => { await accessApi.revokeGrant(grant.id); fetchAccessData(); }} className="text-[12px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
+                                                    Revoke
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -345,12 +334,16 @@ export default function AccessControlPage() {
                     <div className="mt-6 md:mt-0 flex items-center gap-8 bg-blue-500/30 rounded-3xl px-8 py-5 border border-blue-400/30 hover:bg-blue-500/40 transition-colors">
                         <div className="flex flex-col items-center">
                             <span className="text-[10px] font-extrabold text-blue-200 tracking-wider">TOTAL SHARED</span>
-                            <span className="text-[2.25rem] leading-none font-black mt-1">14</span>
+                            <span className="text-[2.25rem] leading-none font-black mt-1">
+                                {loading ? '-' : grants.filter(g => g.scope !== 'NONE').length}
+                            </span>
                         </div>
                         <div className="w-px h-12 bg-blue-400/50"></div>
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-extrabold text-blue-200 tracking-wider">REVOKED (30D)</span>
-                            <span className="text-[2.25rem] leading-none font-black mt-1">2</span>
+                            <span className="text-[10px] font-extrabold text-blue-200 tracking-wider">REVOKED</span>
+                            <span className="text-[2.25rem] leading-none font-black mt-1">
+                                {loading ? '-' : grants.filter(g => g.scope === 'NONE').length}
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -172,9 +172,10 @@ export default function DoctorPatientsPage() {
             });
             alert('Request submitted successfully!');
             setIsRequestModalOpen(false);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Request error:', err);
-            alert('Failed to submit request.');
+            const serverMsg = err?.response?.data?.error || err?.response?.data?.detail;
+            alert(serverMsg || 'Failed to submit request.');
         } finally {
             setRequestSubmitting(false);
         }
